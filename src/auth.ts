@@ -27,11 +27,12 @@ const DEFAULT_REDIRECT_PORTS = [1455, 1456, 1457, 1458, 1459]
 const DEFAULT_REDIRECT_PORT = 1455
 const SCOPES = ['openid', 'profile', 'email', 'offline_access']
 const OAUTH_POLLING_SAFETY_MARGIN_MS = 3000
+const OAUTH_CALLBACK_HOST = 'localhost'
 
 let proxyCache: { key: string; dispatcher: Dispatcher } | null = null
 
 function getRedirectUri(port: number): string {
-  return `http://127.0.0.1:${port}/auth/callback`
+  return `http://${OAUTH_CALLBACK_HOST}:${port}/auth/callback`
 }
 
 interface TokenResponse {
@@ -114,14 +115,14 @@ async function reserveRedirectPort(preferredPort: number): Promise<number> {
     new Promise<number>((resolve, reject) => {
       const server = net.createServer()
       server.once('error', reject)
-      server.listen(port, '127.0.0.1', () => {
+      server.listen(port, OAUTH_CALLBACK_HOST, () => {
         const address = server.address()
         const selected = typeof address === 'object' && address ? address.port : port
         server.close(() => resolve(selected))
       })
     })
 
-  const candidates = [preferredPort, ...DEFAULT_REDIRECT_PORTS.filter((port) => port !== preferredPort), 0]
+  const candidates = [preferredPort, ...DEFAULT_REDIRECT_PORTS.filter((port) => port !== preferredPort)]
   for (const port of candidates) {
     try {
       return await tryPort(port)
@@ -129,7 +130,7 @@ async function reserveRedirectPort(preferredPort: number): Promise<number> {
       // try next candidate
     }
   }
-  throw new Error(`All callback ports are unavailable: ${candidates.join(', ')}`)
+  throw new Error(`All callback ports are unavailable: ${candidates.join(', ')}. Free one of these ports and try again.`)
 }
 
 export async function createAuthorizationFlow(port?: number): Promise<AuthorizationFlow> {
@@ -310,7 +311,7 @@ export async function loginAccount(
     })
 
     try {
-      server.listen(activeFlow.port, '127.0.0.1', () => {
+      server.listen(activeFlow.port, OAUTH_CALLBACK_HOST, () => {
         console.log(`\n[multi-auth] Login for account "${alias}"`)
         console.log(`[multi-auth] Open this URL in your browser:\n`)
         console.log(`  ${activeFlow.url}\n`)
