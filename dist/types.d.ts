@@ -82,6 +82,7 @@ export interface OpenAIModel {
 export interface PluginConfig {
     rotationStrategy: 'round-robin' | 'least-used' | 'random' | 'weighted-round-robin';
     autoRefreshTokens: boolean;
+    syncOpenCodeAuth: boolean;
     rateLimitCooldownMs: number;
     modelUnsupportedCooldownMs: number;
     workspaceDeactivatedCooldownMs: number;

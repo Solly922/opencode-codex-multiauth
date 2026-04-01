@@ -4,6 +4,14 @@ const OPENAI_ISSUER = 'https://auth.openai.com';
 const AUTH_SYNC_COOLDOWN_MS = 10_000;
 let lastSyncedAccess = null;
 let lastSyncAt = 0;
+let authSyncEnabled = process.env.OPENCODE_MULTI_AUTH_SYNC_OPENCODE_AUTH === '1' || process.env.OPENCODE_MULTI_AUTH_SYNC_OPENCODE_AUTH === 'true';
+export function setOpenCodeAuthSyncEnabled(enabled) {
+    if (typeof enabled === 'boolean') {
+        authSyncEnabled = enabled;
+        return;
+    }
+    authSyncEnabled = process.env.OPENCODE_MULTI_AUTH_SYNC_OPENCODE_AUTH === '1' || process.env.OPENCODE_MULTI_AUTH_SYNC_OPENCODE_AUTH === 'true';
+}
 async function fetchEmail(accessToken) {
     try {
         const res = await fetch(`${OPENAI_ISSUER}/userinfo`, {
@@ -46,6 +54,8 @@ function buildAlias(email, existingAliases) {
     return candidate;
 }
 export async function syncAuthFromOpenCode(getAuth) {
+    if (!authSyncEnabled)
+        return;
     const now = Date.now();
     if (now - lastSyncAt < AUTH_SYNC_COOLDOWN_MS)
         return;

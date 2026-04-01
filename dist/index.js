@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { syncAuthFromOpenCode } from './auth-sync.js';
+import { setOpenCodeAuthSyncEnabled, syncAuthFromOpenCode } from './auth-sync.js';
 import { createAuthorizationFlow, createDeviceAuthorizationFlow, fetchWithProxy, loginAccount, loginAccountHeadless } from './auth.js';
 import { extractRateLimitUpdate, getBlockingRateLimitResetAt, mergeRateLimits, parseRateLimitResetFromError, parseRetryAfterHeader } from './rate-limits.js';
 import { getNextAccount, markAuthInvalid, markModelUnsupported, markRateLimited, markWorkspaceDeactivated } from './rotation.js';
@@ -469,6 +469,7 @@ const MultiAuthPlugin = async ({ client, $, serverUrl, project, directory }) => 
             const patch = config.provider?.[PROVIDER_ID] || {};
             const pluginPatch = patch['multiAuth'] || {};
             configure(pluginPatch);
+            setOpenCodeAuthSyncEnabled(pluginPatch.syncOpenCodeAuth);
             const injectModelsRaw = process.env.OPENCODE_MULTI_AUTH_INJECT_MODELS;
             const injectModels = injectModelsRaw !== '0' && injectModelsRaw !== 'false';
             if (!injectModels)

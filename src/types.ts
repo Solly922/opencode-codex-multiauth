@@ -138,6 +138,7 @@ export interface OpenAIModel {
 export interface PluginConfig {
   rotationStrategy: 'round-robin' | 'least-used' | 'random' | 'weighted-round-robin'
   autoRefreshTokens: boolean
+  syncOpenCodeAuth: boolean
   rateLimitCooldownMs: number // How long to skip rate-limited accounts
   modelUnsupportedCooldownMs: number // How long to skip accounts that don't support the requested model
   workspaceDeactivatedCooldownMs: number // How long to skip accounts with deactivated workspaces
@@ -168,6 +169,7 @@ export interface ProviderModel {
 export const DEFAULT_CONFIG: PluginConfig = {
   rotationStrategy: 'round-robin',
   autoRefreshTokens: true,
+  syncOpenCodeAuth: false,
   rateLimitCooldownMs: 5 * 60 * 1000, // 5 minutes
   modelUnsupportedCooldownMs: 30 * 60 * 1000, // 30 minutes
   workspaceDeactivatedCooldownMs: 30 * 60 * 1000, // 30 minutes

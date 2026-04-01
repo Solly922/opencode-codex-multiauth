@@ -7,6 +7,15 @@ const AUTH_SYNC_COOLDOWN_MS = 10_000
 
 let lastSyncedAccess: string | null = null
 let lastSyncAt = 0
+let authSyncEnabled = process.env.OPENCODE_MULTI_AUTH_SYNC_OPENCODE_AUTH === '1' || process.env.OPENCODE_MULTI_AUTH_SYNC_OPENCODE_AUTH === 'true'
+
+export function setOpenCodeAuthSyncEnabled(enabled: boolean | undefined): void {
+  if (typeof enabled === 'boolean') {
+    authSyncEnabled = enabled
+    return
+  }
+  authSyncEnabled = process.env.OPENCODE_MULTI_AUTH_SYNC_OPENCODE_AUTH === '1' || process.env.OPENCODE_MULTI_AUTH_SYNC_OPENCODE_AUTH === 'true'
+}
 
 async function fetchEmail(accessToken: string): Promise<string | undefined> {
   try {
@@ -49,6 +58,7 @@ function buildAlias(email: string | undefined, existingAliases: Set<string>): st
 }
 
 export async function syncAuthFromOpenCode(getAuth: () => Promise<Auth>): Promise<void> {
+  if (!authSyncEnabled) return
   const now = Date.now()
   if (now - lastSyncAt < AUTH_SYNC_COOLDOWN_MS) return
   lastSyncAt = now

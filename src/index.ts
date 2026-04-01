@@ -1,6 +1,6 @@
 import type { Plugin, PluginInput } from '@opencode-ai/plugin'
 import fs from 'node:fs'
-import { syncAuthFromOpenCode } from './auth-sync.js'
+import { setOpenCodeAuthSyncEnabled, syncAuthFromOpenCode } from './auth-sync.js'
 import { createAuthorizationFlow, createDeviceAuthorizationFlow, fetchWithProxy, loginAccount, loginAccountHeadless } from './auth.js'
 import {
   extractRateLimitUpdate,
@@ -540,6 +540,7 @@ const MultiAuthPlugin: Plugin = async ({ client, $, serverUrl, project, director
 	      const patch = (config.provider?.[PROVIDER_ID] as Record<string, unknown> | undefined) || {}
 	      const pluginPatch = (patch['multiAuth'] as Record<string, unknown> | undefined) || {}
 	      configure(pluginPatch as Partial<PluginConfig>)
+	      setOpenCodeAuthSyncEnabled((pluginPatch as Partial<PluginConfig>).syncOpenCodeAuth)
 
 	      const injectModelsRaw = process.env.OPENCODE_MULTI_AUTH_INJECT_MODELS
 	      const injectModels = injectModelsRaw !== '0' && injectModelsRaw !== 'false'
