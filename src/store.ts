@@ -3,6 +3,7 @@ import * as path from 'path'
 import * as os from 'os'
 import * as crypto from 'node:crypto'
 import lockfile from 'proper-lockfile'
+import { resolveRoundRobinIndex } from './account-order.js'
 import { hasMeaningfulRateLimits } from './rate-limits.js'
 import type {
   AccountStore,
@@ -634,9 +635,13 @@ export function setActiveAlias(alias: string | null): AccountStore {
       }
 
       const aliases = Object.keys(store.accounts)
-      const idx = aliases.indexOf(alias)
-      if (idx >= 0) {
-        store.rotationIndex = idx
+      if (aliases.length > 0) {
+        store.rotationIndex = resolveRoundRobinIndex(
+          store.accounts,
+          alias,
+          now,
+          store.rotationIndex
+        )
       }
       store.lastRotation = now
     }

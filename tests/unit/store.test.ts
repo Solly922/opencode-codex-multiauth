@@ -7,6 +7,7 @@ import {
   getStoreDiagnostics,
   withWriteLock,
   addAccount,
+  setActiveAlias,
   updateAccount,
   removeAccount
 } from '../../src/store.js'
@@ -30,7 +31,10 @@ function cleanup() {
 }
 
 describe('Store Operations', () => {
-  beforeEach(() => setupEnv())
+  beforeEach(() => {
+    cleanup()
+    setupEnv()
+  })
   afterEach(() => cleanupEnv())
   afterAll(() => cleanup())
 
@@ -76,6 +80,30 @@ describe('Store Operations', () => {
     const store = removeAccount('alias1')
     expect(store.accounts['alias1']).toBeUndefined()
     expect(store.accounts['alias2']).toBeDefined()
+  })
+
+  it('should align rotation index with round-robin health ordering when active alias changes', () => {
+    const store = loadStore()
+    store.accounts.alpha = {
+      alias: 'alpha',
+      accessToken: 'token-alpha',
+      refreshToken: 'refresh-alpha',
+      expiresAt: Date.now() + 3600000,
+      usageCount: 0
+    }
+    store.accounts.beta = {
+      alias: 'beta',
+      accessToken: 'token-beta',
+      refreshToken: 'refresh-beta',
+      expiresAt: Date.now() + 3600000,
+      usageCount: 3
+    }
+    saveStore(store)
+
+    const updated = setActiveAlias('alpha')
+
+    expect(updated.activeAlias).toBe('alpha')
+    expect(updated.rotationIndex).toBe(1)
   })
 
   it('should return store diagnostics', () => {

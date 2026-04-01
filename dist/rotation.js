@@ -1,9 +1,8 @@
+import { evaluateAccountHealth, sortAliasesByHealth } from './account-order.js';
 import { getStoreDiagnostics, loadStore, saveStoreUnlocked, updateAccount, withWriteLock } from './store.js';
 import { ensureValidToken } from './auth.js';
 import { isForceActive, checkAndAutoClearForce, getForceState, clearForce } from './force-mode.js';
 import { getRuntimeSettings, calculateWeightedSelection } from './settings.js';
-const HEALTH_HYSTERESIS_MS = 10_000;
-const RECENT_FAILURE_WINDOW_MS = 60_000;
 function shuffled(input) {
     const a = [...input];
     for (let i = a.length - 1; i > 0; i -= 1) {
@@ -11,45 +10,6 @@ function shuffled(input) {
         [a[i], a[j]] = [a[j], a[i]];
     }
     return a;
-}
-function evaluateAccountHealth(acc, now) {
-    const wasRateLimited = !!(acc.rateLimitedUntil && acc.rateLimitedUntil > now - HEALTH_HYSTERESIS_MS);
-    const wasModelUnsupported = !!(acc.modelUnsupportedUntil && acc.modelUnsupportedUntil > now - HEALTH_HYSTERESIS_MS);
-    const wasWorkspaceDeactivated = !!(acc.workspaceDeactivatedUntil && acc.workspaceDeactivatedUntil > now - HEALTH_HYSTERESIS_MS);
-    // Phase D: Check if account is disabled
-    const isDisabled = acc.enabled === false;
-    const currentlyBlocked = !!(acc.rateLimitedUntil && acc.rateLimitedUntil > now) ||
-        !!(acc.modelUnsupportedUntil && acc.modelUnsupportedUntil > now) ||
-        !!(acc.workspaceDeactivatedUntil && acc.workspaceDeactivatedUntil > now) ||
-        !!acc.authInvalid ||
-        isDisabled; // Phase D: Exclude disabled accounts
-    const isInProbation = !currentlyBlocked && (wasRateLimited || wasModelUnsupported || wasWorkspaceDeactivated);
-    let recentFailures = 0;
-    if (acc.lastLimitErrorAt && acc.lastLimitErrorAt > now - RECENT_FAILURE_WINDOW_MS) {
-        recentFailures++;
-    }
-    if (acc.authInvalidatedAt && acc.authInvalidatedAt > now - RECENT_FAILURE_WINDOW_MS) {
-        recentFailures++;
-    }
-    let priority = 100;
-    if (isInProbation)
-        priority -= 30;
-    if (recentFailures > 0)
-        priority -= recentFailures * 10;
-    if (acc.usageCount === 0)
-        priority -= 5;
-    if (currentlyBlocked)
-        priority = 0;
-    // Phase D: Disabled accounts get lowest priority
-    if (isDisabled)
-        priority = -1;
-    return {
-        alias: acc.alias,
-        isHealthy: !currentlyBlocked && !acc.authInvalid && !isDisabled,
-        isInProbation,
-        recentFailures,
-        priority
-    };
 }
 export async function getNextAccount(config) {
     // Phase E: Check and auto-clear expired/invalid force state
@@ -183,11 +143,7 @@ export async function getNextAccount(config) {
                 const weightedAliases = availableAliases.filter(alias => (weights[alias] || 0) > 0);
                 if (weightedAliases.length === 0) {
                     // Fallback to round-robin if no weights defined
-                    const sorted = [...availableAliases].sort((a, b) => {
-                        const healthA = healthMap.get(a);
-                        const healthB = healthMap.get(b);
-                        return (healthB?.priority || 0) - (healthA?.priority || 0);
-                    });
+                    const sorted = sortAliasesByHealth(store.accounts, availableAliases, now);
                     const start = store.rotationIndex % sorted.length;
                     const rr = sorted.map((_, i) => sorted[(start + i) % sorted.length]);
                     const nextIndex = (selected) => {
@@ -202,11 +158,7 @@ export async function getNextAccount(config) {
                 const selected = calculateWeightedSelection(weightedAliases, weights);
                 if (!selected) {
                     // Fallback to round-robin
-                    const sorted = [...availableAliases].sort((a, b) => {
-                        const healthA = healthMap.get(a);
-                        const healthB = healthMap.get(b);
-                        return (healthB?.priority || 0) - (healthA?.priority || 0);
-                    });
+                    const sorted = sortAliasesByHealth(store.accounts, availableAliases, now);
                     const start = store.rotationIndex % sorted.length;
                     const rr = sorted.map((_, i) => sorted[(start + i) % sorted.length]);
                     return { aliases: rr };
@@ -215,11 +167,7 @@ export async function getNextAccount(config) {
             }
             case 'round-robin':
             default: {
-                const sorted = [...availableAliases].sort((a, b) => {
-                    const healthA = healthMap.get(a);
-                    const healthB = healthMap.get(b);
-                    return (healthB?.priority || 0) - (healthA?.priority || 0);
-                });
+                const sorted = sortAliasesByHealth(store.accounts, availableAliases, now);
                 const start = store.rotationIndex % sorted.length;
                 const rr = sorted.map((_, i) => sorted[(start + i) % sorted.length]);
                 const nextIndex = (selected) => {
