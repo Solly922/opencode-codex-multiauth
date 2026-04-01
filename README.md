@@ -1,8 +1,6 @@
-# codex-multiauth
+# @solly922/opencode-codex-multiauth
 
-`codex-multiauth` is an OpenCode plugin that lets you use multiple ChatGPT OAuth accounts with the ChatGPT Codex backend and rotate between them automatically.
-
-It merges the richer feature set from `guard22` with the reliability-focused fixes from `crim50n`.
+`@solly922/opencode-codex-multiauth` is an OpenCode plugin that lets you use multiple ChatGPT OAuth accounts with the ChatGPT Codex backend and rotate between them automatically.
 
 ## Credits
 

@@ -1,5 +1,5 @@
 {
-  "name": "codex-multiauth",
+  "name": "@solly922/opencode-codex-multiauth",
   "version": "1.0.0",
   "description": "Multi-account OAuth rotation for OpenAI Codex with auto model discovery",
   "type": "module",
