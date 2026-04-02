@@ -7,6 +7,7 @@ import { getDefaultModels } from './models.js';
 import { getForceState, isForceActive } from './force-mode.js';
 import { getRuntimeSettings } from './settings.js';
 import { listAccounts, updateAccount, loadStore } from './store.js';
+import { applyModelInjection, normalizeModelInjectionMode } from './model-injection.js';
 import { DEFAULT_CONFIG } from './types.js';
 import { Errors } from './errors.js';
 const PROVIDER_ID = 'openai';
@@ -475,30 +476,20 @@ const MultiAuthPlugin = async ({ client, $, serverUrl, project, directory }) => 
             if (!injectModels)
                 return;
             const latestModel = (process.env.OPENCODE_MULTI_AUTH_CODEX_LATEST_MODEL || 'gpt-5.4').trim();
+            const mode = normalizeModelInjectionMode(process.env.OPENCODE_MULTI_AUTH_MODEL_INJECTION || pluginConfig.modelInjectionMode);
             try {
                 const openai = config.provider?.[PROVIDER_ID] || null;
                 if (!openai || typeof openai !== 'object')
                     return;
-                openai.models ||= {};
-                openai.whitelist ||= [];
                 const defaultModels = getDefaultModels();
-                const injectedModelIds = [latestModel];
-                if (latestModel === 'gpt-5.4' && defaultModels['gpt-5.4-fast']) {
-                    injectedModelIds.push('gpt-5.4-fast');
-                }
-                for (const modelID of injectedModelIds) {
-                    const model = defaultModels[modelID];
-                    if (!model || openai.models[modelID])
-                        continue;
-                    openai.models[modelID] = model;
-                }
-                for (const modelID of injectedModelIds) {
-                    if (!openai.whitelist.includes(modelID)) {
-                        openai.whitelist.unshift(modelID);
-                    }
-                }
+                const injectedModelIds = applyModelInjection({
+                    openai,
+                    defaultModels,
+                    latestModel,
+                    mode
+                });
                 if (process.env.OPENCODE_MULTI_AUTH_DEBUG === '1') {
-                    console.log(`[multi-auth] injected runtime models: ${injectedModelIds.join(', ')}`);
+                    console.log(`[multi-auth] model injection mode=${mode} injected=${injectedModelIds.join(', ') || '(none)'}`);
                 }
             }
             catch (err) {

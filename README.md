@@ -168,6 +168,7 @@ The plugin will:
 - `OPENCODE_MULTI_AUTH_PROXY_URL`: force a proxy for auth/backend traffic
 - `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY`: standard proxy environment variables
 - `OPENCODE_MULTI_AUTH_SYNC_OPENCODE_AUTH=1`: import OpenCode's current `openai` OAuth session into the plugin account pool
+- `OPENCODE_MULTI_AUTH_MODEL_INJECTION=auto|latest|default|opencode`: control whether the plugin preserves OpenCode's model list, injects only the latest model, or injects the full plugin model set
 - `OPENCODE_MULTI_AUTH_INJECT_MODELS=0`: disable runtime model injection
 - `OPENCODE_MULTI_AUTH_STRIP_ITEM_REFERENCES=0`: stop stripping `item_reference` inputs before forwarding
 - `OPENCODE_MULTI_AUTH_PREFER_CODEX_LATEST=1`: map older Codex selections to the configured latest model
@@ -179,6 +180,7 @@ The plugin will:
 - Forwarded requests keep `store: false`.
 - Browser auth and backend traffic are proxy-aware.
 - OpenCode auth-session syncing is disabled by default; enable it only if you want the plugin to import your current OpenCode `openai` login automatically.
+- Model injection defaults to `auto`: preserve OpenCode's existing OpenAI model list when it already exists, otherwise seed the provider with the plugin's default Codex-compatible models.
 - The merged implementation preserves the ChatGPT Codex backend forwarding behavior that made the earlier `crim50n` fork reliable in practice.
 
 ## Troubleshooting
