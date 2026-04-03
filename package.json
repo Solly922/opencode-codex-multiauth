@@ -55,6 +55,10 @@
     "oauth",
     "multi-account"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/solly922/opencode-codex-multiauth.git"
+  },
   "author": "OpenCode",
   "license": "MIT"
 }

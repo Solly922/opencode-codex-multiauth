@@ -45,21 +45,37 @@ This project builds on work from:
 
 ## Quick Start
 
-1. Clone the repo.
-2. Build it.
-3. Point OpenCode at the built plugin entry.
-4. Add one or more ChatGPT accounts.
-5. Start using OpenCode with the `openai` provider.
+1. Install the package.
+2. Point OpenCode at the installed plugin entry.
+3. Add one or more ChatGPT accounts.
+4. Start using OpenCode with the `openai` provider.
 
 ## Install
 
-### 1. Clone and build
+### 1. Install from npm
 
 ```bash
-git clone <repo-url> codex-multiauth
-cd codex-multiauth
-npm ci
-npm run build
+npm install -g @solly922/opencode-codex-multiauth
+```
+
+Then point OpenCode at the installed plugin entry.
+
+Run this to get your global `node_modules` directory:
+
+```bash
+npm root -g
+```
+
+Then use this file URL in OpenCode:
+
+```text
+file://<npm-root>/@solly922/opencode-codex-multiauth/dist/index.js
+```
+
+Example:
+
+```text
+file:///Users/you/.npm-global/lib/node_modules/@solly922/opencode-codex-multiauth/dist/index.js
 ```
 
 ### 2. Add the plugin to OpenCode
@@ -69,22 +85,23 @@ Edit `~/.config/opencode/opencode.json`:
 ```json
 {
   "plugin": [
-    "file:///absolute/path/to/codex-multiauth/dist/index.js"
-  ]
-}
-```
-
-Example:
-
-```json
-{
-  "plugin": [
-    "file:///Users/you/src/codex-multiauth/dist/index.js"
+    "file:///absolute/path/to/@solly922/opencode-codex-multiauth/dist/index.js"
   ]
 }
 ```
 
 Restart OpenCode after updating the config.
+
+### Option: Clone and build locally
+
+```bash
+git clone https://github.com/solly922/opencode-codex-multiauth.git codex-multiauth
+cd codex-multiauth
+npm ci
+npm run build
+```
+
+Then use the built entry at `file:///absolute/path/to/codex-multiauth/dist/index.js` in the same OpenCode config shown above.
 
 ## Add accounts
 
