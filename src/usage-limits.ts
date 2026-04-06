@@ -40,7 +40,18 @@ export interface UsageRateLimitFetchResult {
   planType?: string
   rateLimitedUntil?: number
   error?: string
+  shouldProbeFallback?: boolean
+  authInvalid?: boolean
+  workspaceDeactivated?: boolean
+  workspaceDeactivatedReason?: string
   source: 'usage-api'
+}
+
+interface UsageApiFailureClassification {
+  shouldProbeFallback: boolean
+  authInvalid?: boolean
+  workspaceDeactivated?: boolean
+  workspaceDeactivatedReason?: string
 }
 
 function getUsageBaseUrl(): string {
@@ -85,6 +96,74 @@ function pickRateLimitDetails(payload: UsagePayload): UsageRateLimitDetails | nu
   return additional.find((entry) => entry.rate_limit)?.rate_limit || null
 }
 
+function parseUsageFailure(rawText: string): { code?: string; message?: string } {
+  const trimmed = rawText.trim()
+  if (!trimmed) {
+    return {}
+  }
+
+  try {
+    const payload = JSON.parse(trimmed) as any
+    const code =
+      (typeof payload?.code === 'string' && payload.code) ||
+      (typeof payload?.detail?.code === 'string' && payload.detail.code) ||
+      (typeof payload?.error?.code === 'string' && payload.error.code) ||
+      undefined
+    const message =
+      (typeof payload?.detail?.message === 'string' && payload.detail.message) ||
+      (typeof payload?.detail === 'string' && payload.detail) ||
+      (typeof payload?.error?.message === 'string' && payload.error.message) ||
+      (typeof payload?.message === 'string' && payload.message) ||
+      undefined
+    return { code, message }
+  } catch {
+    return { message: trimmed }
+  }
+}
+
+export function classifyUsageApiFailure(
+  status: number,
+  rawText: string
+): UsageApiFailureClassification {
+  const { code, message } = parseUsageFailure(rawText)
+  const normalized = [code, message, rawText.trim()]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  const authFailure =
+    normalized.includes('token') ||
+    normalized.includes('auth') ||
+    normalized.includes('sign in again') ||
+    normalized.includes('login again') ||
+    normalized.includes('session has expired')
+
+  if (status === 401 || (status === 403 && authFailure)) {
+    return {
+      shouldProbeFallback: false,
+      authInvalid: true
+    }
+  }
+
+  if (
+    status === 402 &&
+    (
+      normalized.includes('deactivated_workspace') ||
+      normalized.includes('deactivated workspace') ||
+      normalized.includes('workspace_deactivated') ||
+      normalized.includes('workspace deactivated')
+    )
+  ) {
+    return {
+      shouldProbeFallback: false,
+      workspaceDeactivated: true,
+      workspaceDeactivatedReason: message || code || rawText.trim() || undefined
+    }
+  }
+
+  return { shouldProbeFallback: true }
+}
+
 export async function fetchUsageRateLimitsForAccount(
   account: AccountCredentials
 ): Promise<UsageRateLimitFetchResult> {
@@ -124,9 +203,11 @@ export async function fetchUsageRateLimitsForAccount(
 
   if (!res.ok) {
     const trimmed = rawText.trim()
+    const classification = classifyUsageApiFailure(res.status, rawText)
     return {
       source: 'usage-api',
-      error: `Usage API returned ${res.status}${trimmed ? `: ${trimmed.slice(0, 280)}` : ''}`
+      error: `Usage API returned ${res.status}${trimmed ? `: ${trimmed.slice(0, 280)}` : ''}`,
+      ...classification
     }
   }
 

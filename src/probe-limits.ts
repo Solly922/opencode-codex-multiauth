@@ -41,17 +41,20 @@ function getAliasHome(alias: string): string {
 }
 
 function writeAuthJson(dir: string, account: AccountCredentials): void {
-  if (!account.accessToken || !account.refreshToken || !account.idToken) {
+  if (!account.accessToken || !account.refreshToken) {
     throw new Error('Missing tokens for alias')
+  }
+  const tokens: Record<string, any> = {
+    access_token: account.accessToken,
+    refresh_token: account.refreshToken,
+    account_id: account.accountId
+  }
+  if (account.idToken) {
+    tokens.id_token = account.idToken
   }
   const auth = {
     OPENAI_API_KEY: null,
-    tokens: {
-      id_token: account.idToken,
-      access_token: account.accessToken,
-      refresh_token: account.refreshToken,
-      account_id: account.accountId
-    },
+    tokens,
     last_refresh: new Date().toISOString()
   }
   const authPath = path.join(dir, 'auth.json')

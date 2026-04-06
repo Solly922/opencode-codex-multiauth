@@ -1253,10 +1253,16 @@ const HTML = `<!doctype html>
         }
         const percent = queue.total ? Math.round((queue.completed / queue.total) * 100) : 0
         const statusLabel = queue.running ? 'Running' : queue.stopped ? 'Stopped' : 'Idle'
+        const currentLabel = Array.isArray(queue.currentAliases) && queue.currentAliases.length > 0
+          ? queue.currentAliases.join(', ')
+          : (queue.currentAlias || 'none')
+        const workerLabel = typeof queue.active === 'number' && typeof queue.concurrency === 'number'
+          ? ' · Workers: ' + queue.active + '/' + queue.concurrency
+          : ''
         queueEl.innerHTML = \`
           <div class="notice">Queue: \${statusLabel} · \${queue.completed}/\${queue.total} · Errors: \${queue.errors}</div>
           <div class="progress-bar"><div class="progress-fill" style="width: \${percent}%"></div></div>
-          <div class="notice">Current: \${queue.currentAlias || 'none'}</div>
+          <div class="notice">Current: \${currentLabel}\${workerLabel}</div>
           \${queue.running ? '<button class="danger small" id="stopQueueBtn">Stop refresh</button>' : ''}
         \`
         const stopBtn = document.getElementById('stopQueueBtn')
@@ -2606,7 +2612,7 @@ export function startWebConsole(options?: { port?: number; host?: string }): htt
 
     if (req.method === 'POST' && path === '/api/limits/refresh') {
       const body = await readJsonBody(req)
-      const accounts = listAccounts().filter((acc) => acc.idToken)
+      const accounts = listAccounts().filter((acc) => acc.refreshToken && acc.accessToken)
       if (body.alias && !accounts.find((acc) => acc.alias === body.alias)) {
         sendJson(res, 400, { error: 'Unknown alias' })
         return
