@@ -1,8 +1,9 @@
 import { getBlockingRateLimitResetAt, isRateLimitErrorText, mergeRateLimits, parseRateLimitResetFromError } from './rate-limits.js';
+import { markAuthInvalid, markWorkspaceDeactivated } from './rotation.js';
 import { loadStore, updateAccount } from './store.js';
 import { probeRateLimitsForAccount } from './probe-limits.js';
 import { logError, logInfo } from './logger.js';
-import { calculateLimitsConfidence } from './types.js';
+import { DEFAULT_CONFIG, calculateLimitsConfidence } from './types.js';
 import { fetchUsageRateLimitsForAccount } from './usage-limits.js';
 export async function refreshRateLimitsForAccount(account) {
     updateAccount(account.alias, { limitStatus: 'running', limitError: undefined });
@@ -28,6 +29,27 @@ export async function refreshRateLimitsForAccount(account) {
         return { alias: account.alias, updated: true };
     }
     if (usage.error) {
+        if (usage.shouldProbeFallback === false) {
+            const now = Date.now();
+            if (usage.authInvalid) {
+                markAuthInvalid(account.alias);
+            }
+            if (usage.workspaceDeactivated) {
+                markWorkspaceDeactivated(account.alias, DEFAULT_CONFIG.workspaceDeactivatedCooldownMs, { error: usage.workspaceDeactivatedReason || usage.error });
+            }
+            updateAccount(account.alias, {
+                limitStatus: 'error',
+                limitError: usage.error,
+                lastLimitErrorAt: now,
+                limitsConfidence: calculateLimitsConfidence(account.lastLimitProbeAt, now, 'error')
+            });
+            logInfo(`Skipping limits probe for ${account.alias}: ${usage.error}`);
+            return {
+                alias: account.alias,
+                updated: false,
+                error: usage.error
+            };
+        }
         logInfo(`Usage API limits lookup failed for ${account.alias}, falling back to probe: ${usage.error}`);
     }
     const probe = await probeRateLimitsForAccount(account);

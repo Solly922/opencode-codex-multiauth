@@ -21,17 +21,20 @@ function getAliasHome(alias) {
     return path.join(CODEX_HOME_ROOT, sanitizeAlias(alias));
 }
 function writeAuthJson(dir, account) {
-    if (!account.accessToken || !account.refreshToken || !account.idToken) {
+    if (!account.accessToken || !account.refreshToken) {
         throw new Error('Missing tokens for alias');
+    }
+    const tokens = {
+        access_token: account.accessToken,
+        refresh_token: account.refreshToken,
+        account_id: account.accountId
+    };
+    if (account.idToken) {
+        tokens.id_token = account.idToken;
     }
     const auth = {
         OPENAI_API_KEY: null,
-        tokens: {
-            id_token: account.idToken,
-            access_token: account.accessToken,
-            refresh_token: account.refreshToken,
-            account_id: account.accountId
-        },
+        tokens,
         last_refresh: new Date().toISOString()
     };
     const authPath = path.join(dir, 'auth.json');

@@ -8,6 +8,9 @@ export interface RefreshQueueState {
     completed: number;
     errors: number;
     currentAlias?: string;
+    currentAliases: string[];
+    active: number;
+    concurrency: number;
     stopRequested: boolean;
     stopped: boolean;
     results: LimitRefreshResult[];
